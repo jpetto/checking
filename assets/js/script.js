@@ -2,127 +2,136 @@ $(function(){
 
 	/* Configuration */
 
-	var APPID = '';		// Your Yahoo APP id
-	var DEG = 'c';		// c for celsius, f for fahrenheit
-
-	// Mapping the weather codes returned by Yahoo's API
-	// to the correct icons in the img/icons folder
-
-	var weatherIconMap = [
-		'storm', 'storm', 'storm', 'lightning', 'lightning', 'snow', 'hail', 'hail',
-		'drizzle', 'drizzle', 'rain', 'rain', 'rain', 'snow', 'snow', 'snow', 'snow',
-		'hail', 'hail', 'fog', 'fog', 'fog', 'fog', 'wind', 'wind', 'snowflake',
-		'cloud', 'cloud_moon', 'cloud_sun', 'cloud_moon', 'cloud_sun', 'moon', 'sun',
-		'moon', 'sun', 'hail', 'sun', 'lightning', 'lightning', 'lightning', 'rain',
-		'snowflake', 'snowflake', 'snowflake', 'cloud', 'rain', 'snow', 'lightning'
-	];
+	var DEG = 'c';			// c for celsius, f for fahrenheit
 
 	var weatherDiv = $('#weather'),
 		scroller = $('#scroller'),
-		location = $('p.location');
+		location1 = $('p.location1'),
+		saveddiv = $('#saveddiv'),
+		saveForcastButton = $('#saveForcast'),
+		saveditems = $('#saveditems'),
+		savedLocations = $('#savedLocations');
 
 	// Does this browser support geolocation?
 	if (navigator.geolocation) {
-	    navigator.geolocation.getCurrentPosition(locationSuccess, locationError);
+		navigator.geolocation.getCurrentPosition(locationSuccess, locationError);
 	}
 	else{
-	    showError("Your browser does not support Geolocation!");
+		showError("Your browser does not support Geolocation!");
 	}
 
-	// Get user's location, and use Yahoo's PlaceFinder API
-	// to get the location name, woeid and weather forecast
+	// Get user's location, and use OpenWeatherMap
+	// to get the location name and weather forecast
 
 	function locationSuccess(position) {
-	    var lat = position.coords.latitude;
-	    var lon = position.coords.longitude;
 
-	    // Yahoo's PlaceFinder API http://developer.yahoo.com/geo/placefinder/
-	    // We are passing the R gflag for reverse geocoding (coordinates to place name)
-	    var geoAPI = 'http://where.yahooapis.com/geocode?location='+lat+','+lon+'&flags=J&gflags=R&appid='+APPID;
+		try{
 
-	    // Forming the query for Yahoo's weather forecasting API with YQL
-	    // http://developer.yahoo.com/weather/
+			// Retrive the cache
+			var cache = localStorage.weatherCache && JSON.parse(localStorage.weatherCache);
 
-	    var wsql = 'select * from weather.forecast where woeid=WID and u="'+DEG+'"',
-	        weatherYQL = 'http://query.yahooapis.com/v1/public/yql?q='+encodeURIComponent(wsql)+'&format=json&callback=?',
-	        code, city, results, woeid;
+			var d = new Date();
 
-	    if (window.console && window.console.info){
-	    	console.info("Coordinates: %f %f", lat, lon);
-	    }
+			// If the cache is newer than 30 minutes, use the cache
+			if(cache && cache.timestamp && cache.timestamp > d.getTime() - 30*60*1000){
 
-	    // Issue a cross-domain AJAX request (CORS) to the GEO service.
-	    // Not supported in Opera and IE.
-	    $.getJSON(geoAPI, function(r){
 
-	        if(r.ResultSet.Found == 1){
+				// Get the offset from UTC (turn the offset minutes into ms)
+				var offset = d.getTimezoneOffset()*60*1000;
+				var city = cache.data.city.name;
+				var country = cache.data.city.country;
 
-	            results = r.ResultSet.Results;
-	            city = results[0].city;
-	            code = results[0].statecode || results[0].countrycode;
+				$.each(cache.data.list, function(){
+					// "this" holds a forecast object
 
-	            // This is the city identifier for the weather API
-	            woeid = results[0].woeid;
+					// Get the local time of this forecast (the api returns it in utc)
+					var localTime = new Date(this.dt*1000 - offset);
 
-	            // Make a weather API request:
-	            $.getJSON(weatherYQL.replace('WID',woeid), function(r){
+					addWeather(
+						this.weather[0].icon,
+						moment(localTime).calendar(),	// We are using the moment.js library to format the date
+						this.weather[0].main + ' <b>' + convertTemperature(this.main.temp_min) + '°' + DEG +
+												' / ' + convertTemperature(this.main.temp_max) + '°' + DEG+'</b>'
+					);
 
-	                if(r.query && r.query.count == 1){
+				});
 
-	                	// Create the weather items in the #scroller UL
+				// Add the location to the page
+				location1.html(city+', <b>'+country+'</b>');
 
-	                    var item = r.query.results.channel.item.condition;
+				weatherDiv.addClass('loaded');
 
-	                    if(!item){
-	                    	showError("We can't find weather information about your city!");
-	                    	if (window.console && window.console.info){
-						    	console.info("%s, %s; woeid: %d", city, code, woeid);
-						    }
+				// Set the slider to the first slide
+				showSlide(0);
 
-						    return false;
-	                    }
+			}
 
-	                    addWeather(item.code, "Now", item.text + ' <b>'+item.temp+'°'+DEG+'</b>');
+			else{
 
-	                    for (var i=0;i<2;i++){
-	                        item = r.query.results.channel.item.forecast[i];
-	                        addWeather(
-	                        	item.code,
-	                        	item.day +' <b>'+item.date.replace('\d+$','')+'</b>',
-	                        	item.text + ' <b>'+item.low+'°'+DEG+' / '+item.high+'°'+DEG+'</b>'
-	                        );
-	                    }
+				// If the cache is old or nonexistent, issue a new AJAX request
 
-	                    // Add the location to the page
-	                    location.html(city+', <b>'+code+'</b>');
+				var weatherAPI = 'http://api.openweathermap.org/data/2.5/forecast?lat='+position.coords.latitude+
+									'&lon='+position.coords.longitude+'&callback=?'
 
-	                    weatherDiv.addClass('loaded');
+				$.getJSON(weatherAPI, function(response){
 
-	                    // Set the slider to the first slide
-	                    showSlide(0);
+					// Store the cache
+					localStorage.weatherCache = JSON.stringify({
+						timestamp:(new Date()).getTime(),	// getTime() returns milliseconds
+						data: response
+					});
 
-	                }
-	                else {
-	                    showError("Error retrieving weather data!");
-	                }
-	            });
+					// Call the function again
+					locationSuccess(position);
+				});
+			}
 
-	        }
-
-	    }).error(function(){
-	    	showError("Your browser does not support CORS requests!");
-	    });
-
+		}
+		catch(e){
+			showError("We can't find information about your city!");
+			window.console && console.error(e);
+		}
 	}
 
-	function addWeather(code, day, condition){
+	saveForcastButton.on('click', function(e) {
 
-	    var markup = '<li>'+
-	    	'<img src="assets/img/icons/'+ weatherIconMap[code] +'.png" />'+
-	    	' <p class="day">'+ day +'</p> <p class="cond">'+ condition +
-	    	'</p></li>';
+		// Retrive the cache
+		var cache = localStorage.weatherCache && JSON.parse(localStorage.weatherCache);
 
-	    scroller.append(markup);
+		var d = new Date();
+
+		// Get the offset from UTC (turn the offset minutes into ms)
+				var offset = d.getTimezoneOffset()*60*1000;
+				var city = cache.data.city.name;
+				var country = cache.data.city.country;
+
+		saveditems.append(weatherDiv);
+
+		saveditems.append(scroller);
+
+		// Add the location to the page
+		savedLocations.append(location1);
+
+		saveddiv.append(saveditems, savedLocations);
+
+		saveddiv.addClass('loaded');
+
+		// Set the slider to the first slide
+		showSlide(0);
+
+		locationSuccess();
+
+
+	});
+
+	function addWeather(icon, day, condition){
+
+		var markup = '<li>'+
+			'<img src="assets/img/icons/'+ icon +'.png" />'+
+			' <p class="day">'+ day +'</p> <p class="cond">'+ condition +
+			'</p></li>';
+
+		scroller.append(markup);
 	}
 
 	/* Handling the previous / next arrows */
@@ -138,6 +147,19 @@ $(function(){
 		showSlide(currentSlide+1);
 	});
 
+
+	// listen for arrow keys
+
+	$(document).keydown(function(e){
+		switch(e.keyCode){
+			case 37:
+				weatherDiv.find('a.previous').click();
+			break;
+			case 39:
+				weatherDiv.find('a.next').click();
+			break;
+		}
+	});
 
 	function showSlide(i){
 		var items = scroller.find('li');
@@ -163,7 +185,7 @@ $(function(){
 	/* Error handling functions */
 
 	function locationError(error){
-    	switch(error.code) {
+		switch(error.code) {
 			case error.TIMEOUT:
 				showError("A timeout occured! Please try again!");
 				break;
@@ -178,7 +200,12 @@ $(function(){
 				break;
 		}
 
-    }
+	}
+
+	function convertTemperature(kelvin){
+		// Convert the temperature to either Celsius or Fahrenheit:
+		return Math.round(DEG == 'c' ? (kelvin - 273.15) : (kelvin*9/5 - 459.67));
+	}
 
 	function showError(msg){
 		weatherDiv.addClass('error').html(msg);
