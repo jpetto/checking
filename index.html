@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="utf-8" />
-        <title>Weather Forecast App Revisited | Tutorialzine Demo</title>
+        <title>Your Weather By Your Location</title>
 
         <!-- The stylesheet -->
         <link rel="stylesheet" href="assets/css/styles.css" />
@@ -10,36 +10,123 @@
         <!-- Google Fonts -->
         <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Playball|Open+Sans+Condensed:300,700" />
 
-        <!--[if lt IE 9]>
-          <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-        <![endif]-->
+    <style type="text/css">
+
+    #saveForcast {
+    position:absolute;
+    top: 85%;
+    left: 50%;
+    }
+
+    h1{
+    text-align:center;
+    font: normal 52px 'Playball', cursive;
+    color:#518191;
+    padding-top:60px;
+    text-shadow:1px 1px 1px rgba(0,0,0,0.1);
+    }
+
+    #saveddiv{
+    position:relative;
+    width:494px;
+    height:407px;
+    margin: 50px auto 25px;
+    overflow:hidden;
+    }
+
+    #saveddiv:before{
+    background: url("../img/preloader.gif") no-repeat center center #111;
+    border: 1px solid #000;
+    border-radius: 50% 50% 50% 50%;
+    box-shadow: 0 1px 2px #444;
+    content: "";
+    height: 44px;
+    left: 50%;
+    margin: -22px 0 0 -22px;
+    opacity: 0.7;
+    position: absolute;
+    top: 150%;
+    width: 44px;
+    }
+
+    #saveddiv.error:before{
+    display:none;
+    }
+
+    #saveddiv.error{
+    text-align:center;
+    font-size: 20px;
+    }
+
+    #saveddiv.loaded #scroller,
+    #saveddiv.loaded .arrow{
+    display:block
+    }
+
+    #saveddiv.loaded:before{
+    display:none;
+    }
+
+    #saveddiv.loaded{
+    border-radius:3px;
+    background:url('../img/weather_bg.jpg') no-repeat;
+    box-shadow:0 0 5px rgba(0,0,0,0.15);
+    }
+
+    #saveddiv.first a.previous,
+    #saveddiv.last a.next{
+    display:none;
+}
+  </style>
+
     </head>
 
     <body>
 
-		<header>
-			<h1>Weather Forecast</h1>
-		</header>
+        <header>
+            <h1>Your Weather By Your Location</h1>
+        </header>
+        </div>
 
         <div id="weather">
 
-        	<ul id="scroller">
-        		<!-- The forecast items will go here -->
-        	</ul>
+            <ul id="scroller">
+                <!-- The forecast items will go here -->
+            </ul>
 
-        	<a href="#" class="arrow previous">Previous</a>
-        	<a href="#" class="arrow next">Next</a>
+            <a href="#" class="arrow previous">Previous</a>
+            <a href="#" class="arrow next">Next</a>
 
         </div>
 
-        <p class="location"></p>
+        <p class="location1"></p>
 
         <div id="clouds"></div>
 
+        <button class="pure-button" id="saveForcast">Save Forcast</button>
+
+        <h1>Your Saved Forcasts</h1>
+
+        <div id="saveddiv">
+
+                <ul id="saveditems">
+                    <!-- Saved forcast items go here -->
+                </ul>
+
+        </div>
+
+            <a href="#" class="arrow previous">Previous</a>
+            <a href="#" class="arrow next">Next</a>
+
+        <ul id="savedLocations">
+            <!-- Holds all of the locations of the saved forcasts -->
+        </ul>
+
         <!-- JavaScript includes - jQuery, moment.js and our own script.js -->
-		<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
         <script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.0.0/moment.min.js"></script>
-		<script src="assets/js/script.js"></script>
+        <script src="assets/js/script.js"></script>
+        <script src="weather.js"></script>
 
     </body>
 </html>

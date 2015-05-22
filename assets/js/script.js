@@ -6,7 +6,11 @@ $(function(){
 
 	var weatherDiv = $('#weather'),
 		scroller = $('#scroller'),
-		location = $('p.location');
+		location1 = $('p.location1'),
+		saveddiv = $('#saveddiv'),
+		saveForcastButton = $('#saveForcast'),
+		saveditems = $('#saveditems'),
+		savedLocations = $('#savedLocations');
 
 	// Does this browser support geolocation?
 	if (navigator.geolocation) {
@@ -31,6 +35,7 @@ $(function(){
 			// If the cache is newer than 30 minutes, use the cache
 			if(cache && cache.timestamp && cache.timestamp > d.getTime() - 30*60*1000){
 
+
 				// Get the offset from UTC (turn the offset minutes into ms)
 				var offset = d.getTimezoneOffset()*60*1000;
 				var city = cache.data.city.name;
@@ -52,7 +57,7 @@ $(function(){
 				});
 
 				// Add the location to the page
-				location.html(city+', <b>'+country+'</b>');
+				location1.html(city+', <b>'+country+'</b>');
 
 				weatherDiv.addClass('loaded');
 
@@ -87,6 +92,37 @@ $(function(){
 			window.console && console.error(e);
 		}
 	}
+
+	saveForcastButton.on('click', function(e) {
+
+		// Retrive the cache
+		var cache = localStorage.weatherCache && JSON.parse(localStorage.weatherCache);
+
+		var d = new Date();
+
+		// Get the offset from UTC (turn the offset minutes into ms)
+				var offset = d.getTimezoneOffset()*60*1000;
+				var city = cache.data.city.name;
+				var country = cache.data.city.country;
+
+		saveditems.append(weatherDiv);
+
+		saveditems.append(scroller);
+
+		// Add the location to the page
+		savedLocations.append(location1);
+
+		saveddiv.append(saveditems, savedLocations);
+
+		saveddiv.addClass('loaded');
+
+		// Set the slider to the first slide
+		showSlide(0);
+
+		locationSuccess();
+
+
+	});
 
 	function addWeather(icon, day, condition){
 
